@@ -7,7 +7,7 @@
 // =====================================================================
 window.OR_CONFIG = {
   SUPABASE_URL: 'https://necbvecmxdahzisdiekg.supabase.co/rest/v1/',
-  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5lY2J2ZWNteGRhaHppc2RpZWtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQzMDE4MzQsImV4cCI6MjEwOTg3NzgzNH0.tMFWTR8B0j-2GlDpaJ911KSI5s27Gy8Ht_LZgFQAu7M',
+  SUPABASE_ANON_KEY: 'sb_publishable_vxN2VvxCBYQVS0RX27W0Xg_DgHNXMdI',
 
   // ออกจากระบบอัตโนมัติเมื่อไม่มีการใช้งาน (นาที) — เครื่องกลางในห้องผ่าตัดควรตั้งไว้
   IDLE_MINUTES: 30,
