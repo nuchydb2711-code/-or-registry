@@ -203,8 +203,8 @@
 
   /* ---------- โครงหน้า ---------- */
   var NAV = [
-    ['dashboard.html', 'ภาพรวม', ['ADMIN', 'STAFF', 'VIEWER']],
     ['new-case.html', 'ลงทะเบียน Case', ['ADMIN', 'STAFF']],
+    ['dashboard.html', 'ภาพรวม', ['ADMIN', 'STAFF', 'VIEWER']],
     ['registry.html', 'ทะเบียน', ['ADMIN', 'STAFF', 'VIEWER']],
     ['reports.html', 'รายงาน', ['ADMIN', 'STAFF', 'VIEWER']],
     ['settings.html', 'ตั้งค่า', ['ADMIN']]
@@ -215,7 +215,7 @@
       return '<a href="' + n[0] + '"' + (n[0] === page ? ' class="on" aria-current="page"' : '') + '>' + n[1] + '</a>';
     }).join('');
     el.className = 'topbar';
-    el.innerHTML = '<div class="topbar-in"><a class="brand" href="dashboard.html"><i>✚</i>OR Registry</a><nav class="nav">' + links +
+    el.innerHTML = '<div class="topbar-in"><a class="brand" href="new-case.html"><i>✚</i>OR Registry</a><nav class="nav">' + links +
       '</nav><div class="userbox"><span class="nm"><b>' + OR.esc(ctx.profile.full_name || ctx.user.email) + '</b></span><span class="role">' + OR.esc(OR.L.role[ctx.role]) +
       '</span><button class="btn sm" id="btnLogout" type="button">ออกจากระบบ</button></div></div>';
     document.getElementById('btnLogout').onclick = function () { OR.auth.signOut(); };

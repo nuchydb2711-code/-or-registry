@@ -1,8 +1,8 @@
 /* OR Registry — Modern Hospital: ฟ้า ขาว เขียวอ่อน */
 :root{
-  --blue:#0b6fb8; --blue-dark:#08548c; --blue-soft:#e6f2fb;
+  --blue:#167f83; --blue-dark:#12334b; --blue-soft:#e5f1f1;
   --mint:#2f9e7a; --mint-soft:#e3f6ee;
-  --bg:#f3f8fb; --card:#fff; --ink:#14293d; --muted:#5b7083; --line:#d8e4ed;
+  --bg:#f4f7f8; --card:#fff; --ink:#14293d; --muted:#5b7083; --line:#d9e3e7;
   --warn:#b45309; --warn-soft:#fdf1de; --bad:#b42318; --bad-soft:#fde8e6; --gray-soft:#eef2f5;
   --radius:12px; --shadow:0 1px 3px rgba(20,41,61,.08),0 4px 14px rgba(20,41,61,.05);
   --f:'Sarabun','Prompt',system-ui,-apple-system,'Segoe UI',sans-serif; --fh:'Prompt','Sarabun',system-ui,sans-serif;
@@ -150,3 +150,48 @@ dl.kv dt{color:var(--muted)}dl.kv dd{margin:0;word-break:break-word}
 .sumgrid table{font-size:.88rem}
 
 @media print{.topbar,.toasts,.toolbar,.actions{display:none!important}body{background:#fff}}
+
+/* ---------- OR Registry: ปรับโทนสีและทีมผ่าตัด ---------- */
+:root{--blue:#397f91;--blue-dark:#24485b;--blue-soft:#e8f3f5;--mint:#379b83;--mint-soft:#e7f6f0;--bg:#f5f7fb;--line:#dce5ec;--radius:14px;--shadow:0 2px 6px rgba(36,72,91,.06),0 8px 24px rgba(36,72,91,.045)}
+.card{padding:22px}.pagehead h1{color:#24485b;letter-spacing:-.02em}
+input,select,textarea{border-color:#d3dfe8;border-radius:11px;transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{outline:0;border-color:#68a9b4;box-shadow:0 0 0 3px rgba(104,169,180,.15)}.btn{border-radius:11px}
+.team-panel{padding:16px;border:1px solid #d9e9eb;border-radius:14px;background:linear-gradient(135deg,#f2f8f8,#f8f7fc)}
+.team-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}.team-head label{font:600 1rem var(--fh);color:var(--blue-dark);margin:0}
+.team-row{display:grid;grid-template-columns:minmax(190px,.9fr) minmax(200px,1.5fr) 42px;gap:9px;margin:8px 0;align-items:center}.team-row select,.team-row input{min-width:0;background:#fff}
+.team-remove{height:44px;width:42px;border:1px solid #f0d3d5;border-radius:10px;background:#fff;color:#b54754;font-size:1.35rem;cursor:pointer}.team-remove:hover{background:#fff0f1}
+@media(max-width:560px){.team-row{grid-template-columns:1fr 42px}.team-row select{grid-column:1/-1}.team-row input{grid-column:1}.team-row .team-remove{grid-column:2;grid-row:2}}
+
+/* ---------- อ่านง่าย: แบ่งขอบเขตฟอร์ม OR เป็นหมวดชัดเจน ---------- */
+#p2 > .grid, #p3 > .grid{gap:18px 20px;align-items:start}
+#p2 > .grid > div:not(.sect), #p3 > .grid > div:not(.sect){min-width:0}
+.sect{
+  display:flex;align-items:center;gap:10px;
+  margin:10px 0 0;padding:12px 15px;
+  min-height:46px;border:1px solid #d7e8eb;border-left:5px solid var(--blue);
+  border-radius:10px;background:linear-gradient(90deg,#eaf4f5 0%,#f7fafb 100%);
+  color:#24485b;font:600 1rem var(--fh);letter-spacing:.01em;
+}
+.sect::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#379b83;flex:none}
+.sect.sect-time{background:linear-gradient(90deg,#e7f5f2 0%,#f7fbfa 100%);border-color:#cce7df;border-left-color:#379b83;color:#176c62}
+.sect.sect-time::before{background:#379b83}
+#p2 > .grid > div:not(.sect), #p3 > .grid > div:not(.sect){padding-top:1px}
+#p2 label, #p3 label{color:#29485a}
+#p2 .hint, #p3 .hint{line-height:1.45}
+#p3 input[type=time]{font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:.04em;background:#fbfefe;border-color:#c8dcdf}
+#p3 #cf_er_time_box, #p3 #cf_arrive, #p3 #cf_start, #p3 #cf_end, #p3 #cf_recov{min-width:0}
+.team-panel{background:linear-gradient(135deg,#f0f7f7 0%,#f8f9fc 100%);border:1px solid #cfe2e5;box-shadow:inset 0 1px 0 #fff}
+.team-head{padding-bottom:10px;border-bottom:1px solid #dce9eb}
+.team-head label{font-size:1.05rem}
+.team-row{padding:8px;background:rgba(255,255,255,.78);border:1px solid #e0e9ec;border-radius:11px}
+#p2 .grid > .full, #p3 .grid > .full{min-width:0}
+#p3 #cf_risk_box{padding:14px;background:#fff;border:1px solid #e0e9ec;border-radius:12px}
+#p3 #cf_risk_types{gap:8px}
+#p3 #cf_risk_types label{background:#fff;border-color:#dce5e9}
+#p3 textarea{min-height:96px}
+@media(max-width:640px){
+  .card{padding:14px}
+  #p2 > .grid, #p3 > .grid{gap:14px}
+  .sect{font-size:.94rem;padding:10px 12px;margin-top:8px}
+  .team-panel{padding:12px}
+}

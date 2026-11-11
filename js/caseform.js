@@ -28,38 +28,44 @@
       Object.keys(OR.L.status).forEach(function (k) { if (k !== 'CANCELLED' || isAdmin || wasCancelled) statusMap[k] = OR.L.status[k]; });
 
       s2.innerHTML =
+        '<div class="sect">01 · ข้อมูลวันผ่าตัดและประเภทเคส</div>' +
         '<div><label for="cf_date">วันที่ผ่าตัด <span class="req">*</span></label><input id="cf_date" type="date" value="' + esc(v.surgery_date || OR.today()) + '"></div>' +
         '<div><label for="cf_type">ประเภทการผ่าตัด <span class="req">*</span></label><select id="cf_type">' + OR.enumOptions(OR.L.caseType, '— เลือก —', v.case_type) + '</select></div>' +
         '<div><label for="cf_urgency">ความเร่งด่วน</label><select id="cf_urgency">' + OR.enumOptions(OR.L.urgency, false, v.urgency || 'ELECTIVE') + '</select></div>' +
         '<div><label class="chk" style="margin-top:22px"><input id="cf_er" type="checkbox"' + (v.from_er ? ' checked' : '') + '> รับผู้ป่วยจาก ER</label></div>' +
         '<div><label for="cf_dept">แผนก <span class="req">*</span></label><select id="cf_dept"></select></div>' +
         '<div><label for="cf_opcode">Code operation (ใช้นับยอดรายเดือน)</label><select id="cf_opcode"></select></div>' +
+        '<div class="sect">02 · ข้อมูลการวินิจฉัยและรายการผ่าตัด</div>' +
         '<div class="full"><label for="cf_dx">Diagnosis <span class="req">*</span></label><input id="cf_dx" type="text" maxlength="300" value="' + esc(v.diagnosis || '') + '"></div>' +
         '<div class="full"><label for="cf_op">Operation <span class="req">*</span></label><input id="cf_op" type="text" maxlength="300" value="' + esc(v.operation_name || '') + '"></div>' +
         '<div><label for="cf_icd9">Operation (ICD-9)</label><input id="cf_icd9" type="text" maxlength="120" value="' + esc(v.icd9_code || '') + '"></div>' +
         '<div><label for="cf_site">ข้างที่ผ่าตัด (Site)</label><select id="cf_site">' + OR.enumOptions(OR.L.site, '— ไม่ระบุ —', v.site) + '</select></div>' +
         '<div><label for="cf_fx">Fracture (ถ้ามี)</label><select id="cf_fx">' + OR.enumOptions(OR.L.fracture, '— ไม่เกี่ยวข้อง —', v.fracture_type) + '</select></div>' +
+        '<div class="sect">03 · แพทย์ผู้ทำผ่าตัดและวิสัญญี</div>' +
         '<div><label for="cf_surgeon">ศัลยแพทย์ <span class="req">*</span></label><select id="cf_surgeon"></select><div class="hint" id="cf_surgeon_hint"></div></div>' +
         '<div><label for="cf_anes">วิสัญญีแพทย์ / ผู้ให้ยา (Anesth)</label><select id="cf_anes"></select></div>';
 
       s3.innerHTML =
+        '<div class="sect">04 · ห้องผ่าตัดและการระงับความรู้สึก</div>' +
         '<div><label for="cf_room">ห้องผ่าตัด</label><select id="cf_room"></select></div>' +
         '<div><label for="cf_antype">ประเภทการระงับความรู้สึก</label><select id="cf_antype"></select><div class="hint">กรณีใช้หลายแบบ (เช่น LA+GA) เลือกแบบหลัก และบันทึกเพิ่มในหมายเหตุ</div></div>' +
-        '<div class="sect">เวลา (กรอกเฉพาะชั่วโมง:นาที ใช้วันที่ผ่าตัดอัตโนมัติ)</div>' +
+        '<div class="sect sect-time">05 · Surgery Timeline — บันทึกเวลา</div>' +
         '<div id="cf_er_time_box"><label for="cf_ertime">เวลารับผู้ป่วยจาก ER</label><input id="cf_ertime" type="time" value="' + esc(timeOf(v.admission_time)) + '"></div>' +
         '<div><label for="cf_arrive">คนไข้ถึง OR</label><input id="cf_arrive" type="time" value="' + esc(timeOf(v.or_entry_time)) + '"></div>' +
         '<div><label for="cf_start">เริ่มผ่าตัด (Start)</label><input id="cf_start" type="time" value="' + esc(timeOf(v.surgery_start_time)) + '"></div>' +
         '<div><label for="cf_end">สิ้นสุดผ่าตัด (Finish)</label><input id="cf_end" type="time" value="' + esc(timeOf(v.surgery_end_time)) + '"></div>' +
         '<div><label for="cf_recov">ออกจาก OR / เข้า Recovery room</label><input id="cf_recov" type="time" value="' + esc(timeOf(v.or_exit_time)) + '"></div>' +
-        '<div class="sect">สถานะและผลการผ่าตัด</div>' +
+        '<div class="sect">06 · สถานะและผลการผ่าตัด</div>' +
         '<div><label for="cf_status">สถานะ Case <span class="req">*</span></label><select id="cf_status"' + (wasCancelled && !isAdmin ? ' disabled' : '') + '>' + OR.enumOptions(statusMap, false, v.case_status || 'IN_PROGRESS') + '</select></div>' +
         '<div id="cf_cancel_box" class="full"><label for="cf_cancel">เหตุผลการยกเลิก <span class="req">*</span></label><input id="cf_cancel" type="text" maxlength="300" value="' + esc(v.cancel_reason || '') + '"></div>' +
         '<div class="full"><label for="cf_result">ผลการผ่าตัด</label><input id="cf_result" type="text" maxlength="500" value="' + esc(v.result || '') + '"></div>' +
-        '<div class="sect">ข้อมูลเพิ่มเติมตามทะเบียน</div>' +
+        '<div class="sect">07 · ข้อมูลทะเบียนและการจำแนก</div>' +
         '<div><label for="cf_wound">Class แผล</label><select id="cf_wound">' + OR.enumOptions(OR.L.wound, '— ไม่ระบุ —', v.wound_class) + '</select></div>' +
         '<div><label for="cf_period">ในเวลา / นอกเวลา</label><select id="cf_period">' + OR.enumOptions(OR.L.period, '— ไม่ระบุ —', v.work_period) + '</select><div class="hint" id="cf_period_hint"></div></div>' +
         '<div><label for="cf_ward">Ward</label><input id="cf_ward" type="text" maxlength="60" value="' + esc(v.ward || '') + '"></div>' +
-        '<div><label for="cf_team">Team (พยาบาล)</label><input id="cf_team" type="text" maxlength="300" value="' + esc(v.team || '') + '"></div>' +
+        '<div class="sect">08 · ทีมผ่าตัด (OR Team)</div>' +
+        '<div class="full team-panel"><div class="team-head"><div><label>ทีมผ่าตัด (OR Team)</label><div class="hint">เลือกบทบาทและระบุชื่อผู้ปฏิบัติงาน เพิ่มได้หลายคน ระบบจะบันทึกชื่อพร้อมตำแหน่ง</div></div><button class="btn sm" id="cf_team_add" type="button">＋ เพิ่มบุคลากร</button></div><div id="cf_team_rows"></div><input id="cf_team" type="hidden" value="' + esc(v.team || '') + '"></div>' +
+        '<div class="sect">09 · ความปลอดภัย ความเสี่ยง และข้อมูลเพิ่มเติม</div>' +
         '<div><label class="chk"><input id="cf_ods" type="checkbox"' + (v.ods_mis ? ' checked' : '') + '> โครงการ ODS / MIS</label></div>' +
         '<div><label for="cf_supplies">ตรวจเวชภัณฑ์ในระบบ</label><select id="cf_supplies"><option value="">— ไม่ระบุ —</option><option value="1"' + (v.supplies_checked === true ? ' selected' : '') + '>ครบ</option><option value="0"' + (v.supplies_checked === false ? ' selected' : '') + '>ไม่ครบ</option></select></div>' +
         '<div class="full"><label class="chk"><input id="cf_risk" type="checkbox"' + (v.has_risk ? ' checked' : '') + '> มีความเสี่ยง</label></div>' +
@@ -71,6 +77,38 @@
       var root = document.createElement('div'); root.appendChild(s2); root.appendChild(s3);
       // s2/s3 อาจถูกย้ายไปแสดงคนละหน้าจอ (ขั้นตอน 2 / 3) จึงค้นจากสองส่วนนี้โดยตรง ไม่ใช้ root
       var g = function (id) { return s2.querySelector('#' + id) || s3.querySelector('#' + id); };
+
+      /* ----- ทีมผ่าตัด: เลือกบทบาท + ระบุชื่อ บันทึกลงคอลัมน์ team เดิมเพื่อไม่ต้องแก้ฐานข้อมูล ----- */
+      var teamRoles = [
+        ['SURGICAL_ASSISTANT', 'Surgical Assistant'],
+        ['SCRUB_NURSE', 'Scrub Nurse'],
+        ['CIRCULATING_NURSE', 'Circulating Nurse'],
+        ['NA', 'NA'],
+        ['ANESTHESIOLOGIST', 'Anesthesiologist'],
+        ['ANESTHESIA_NURSE', 'Anesthesia Nurse'],
+        ['OTHER', 'Other / Legacy']
+      ];
+      var teamRows = g('cf_team_rows');
+      function addTeamRow(role, name) {
+        var row = document.createElement('div'); row.className = 'team-row';
+        row.innerHTML = '<select aria-label="ตำแหน่งในทีม" class="team-role">' + teamRoles.map(function (r) { return '<option value="' + r[0] + '"' + (r[0] === (role || 'SCRUB_NURSE') ? ' selected' : '') + '> ' + r[1] + '</option>'; }).join('') + '</select>' +
+          '<input class="team-name" type="text" maxlength="120" placeholder="ชื่อ-สกุลบุคลากร" aria-label="ชื่อบุคลากร" value="' + esc(name || '') + '">' +
+          '<button class="team-remove" type="button" aria-label="ลบบุคลากร" title="ลบ">×</button>';
+        row.querySelector('.team-remove').addEventListener('click', function () { row.remove(); syncTeam(); });
+        row.querySelectorAll('select,input').forEach(function (el) { el.addEventListener('change', syncTeam); el.addEventListener('input', syncTeam); });
+        teamRows.appendChild(row); syncTeam();
+      }
+      function syncTeam() {
+        var lines = Array.prototype.slice.call(teamRows.querySelectorAll('.team-row')).map(function (row) {
+          var role = row.querySelector('.team-role'), name = row.querySelector('.team-name').value.trim();
+          var label = (teamRoles.filter(function (r) { return r[0] === role.value; })[0] || teamRoles[4])[1];
+          return name ? label + ': ' + name : '';
+        }).filter(Boolean);
+        g('cf_team').value = lines.join(' | ');
+      }
+      var oldTeam = (v.team || '').trim();
+      if (oldTeam) addTeamRow('OTHER', oldTeam); else addTeamRow('SURGICAL_ASSISTANT', '');
+      g('cf_team_add').addEventListener('click', function () { addTeamRow('SURGICAL_ASSISTANT', ''); });
 
       /* ----- dropdown ที่ขึ้นกับข้อมูลหลัก ----- */
       g('cf_dept').innerHTML = OR.options(lookups.departments.filter(function (d) { return d.is_active || d.id === v.department_id; }), function (d) { return d.id; }, function (d) { return d.department_name; }, '— เลือกแผนก —', v.department_id);

@@ -6,7 +6,7 @@
   if (/[?&]r=idle/.test(location.search)) show('ออกจากระบบอัตโนมัติเนื่องจากไม่มีการใช้งาน กรุณาเข้าสู่ระบบใหม่', 'warn');
 
   // ถ้ามี session อยู่แล้วให้เข้าระบบเลย
-  OR.db.auth.getSession().then(function (s) { if (s.data.session) location.replace('dashboard.html'); });
+  OR.db.auth.getSession().then(function (s) { if (s.data.session) location.replace('new-case.html'); });
 
   var busy = false;
   form.addEventListener('submit', async function (e) {
@@ -17,7 +17,7 @@
     busy = true; OR.busy(go, true, 'กำลังเข้าสู่ระบบ...'); msg.innerHTML = '';
     try {
       await OR.auth.signIn(email, pw);
-      location.replace('dashboard.html');
+      location.replace('new-case.html');
     } catch (err) {
       // ไม่บอกว่าอีเมลหรือรหัสผ่านผิดข้อใด
       show(/Invalid login|credentials/i.test(err.message || '') ? 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' : OR.errMsg(err), 'err');

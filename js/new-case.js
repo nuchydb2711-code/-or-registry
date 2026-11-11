@@ -51,7 +51,7 @@
     else h += '<button class="btn" id="bSaveNew" type="button">บันทึกและลงทะเบียน Case ใหม่</button><button class="btn ok" id="bSave" type="button">บันทึกข้อมูล</button>';
     f.innerHTML = h + '</div>';
     $('#bCancel').onclick = async function () {
-      if (await OR.confirm('ยกเลิกการลงทะเบียนนี้? ข้อมูลที่กรอกไว้จะหายไป', { okText: 'ยกเลิกการลงทะเบียน', cancelText: 'กลับไปกรอกต่อ', danger: true })) location.href = 'dashboard.html';
+      if (await OR.confirm('ยกเลิกการลงทะเบียนนี้? ข้อมูลที่กรอกไว้จะหายไป', { okText: 'ยกเลิกการลงทะเบียน', cancelText: 'กลับไปกรอกต่อ', danger: true })) location.href = 'new-case.html';
     };
     if ($('#bBack')) $('#bBack').onclick = function () { showStep(S.step - 1); };
     if ($('#bNext')) $('#bNext').onclick = next;
