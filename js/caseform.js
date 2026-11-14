@@ -130,7 +130,7 @@
         '<div><label for="cf_period">ในเวลา / นอกเวลา</label><select id="cf_period">' + OR.enumOptions(OR.L.period, '— ไม่ระบุ —', v.work_period) + '</select><div class="hint" id="cf_period_hint"></div></div>' +
         '<div><label for="cf_ward">Ward</label><input id="cf_ward" type="text" maxlength="60" value="' + esc(v.ward || '') + '"></div>' +
         '<div class="sect">08 · ทีมผ่าตัด (OR Team)</div>' +
-        '<div class="full team-panel"><div class="team-head"><div><label>ทีมผ่าตัด (OR Team)</label><div class="hint">คลิกช่องชื่อเพื่อเลือกจากรายชื่อ หรือพิมพ์ค้นหา · ไม่มีชื่อ พิมพ์แล้วกด “＋ เพิ่ม” ได้เลย</div></div><div class="team-tools"><button class="btn sm" id="cf_team_copy" type="button" title="ใช้ทีมจาก Case ล่าสุดของวัน/ห้องเดียวกัน">⎘ ใช้ทีมเดิม</button><button class="btn sm" id="cf_team_add" type="button">＋ เพิ่มบุคลากร</button></div></div><div id="cf_team_rows"></div><input id="cf_team" type="hidden" value="' + esc(v.team || '') + '"></div>' +
+        '<div class="full team-panel"><div class="team-head"><div><label>ทีมผ่าตัด (OR Team)</label><div class="hint">คลิกช่องชื่อเพื่อเลือกจากรายชื่อ · ไม่มีชื่อให้พิมพ์ได้เลย เมื่อบันทึก Case ระบบจะจำชื่อใหม่ไว้ให้เลือกครั้งหน้า (หรือกด “＋ เพิ่ม” ในรายการเพื่อจำทันที)</div></div><div class="team-tools"><button class="btn sm" id="cf_team_copy" type="button" title="ใช้ทีมจาก Case ล่าสุดของวัน/ห้องเดียวกัน">⎘ ใช้ทีมเดิม</button><button class="btn sm" id="cf_team_add" type="button">＋ เพิ่มบุคลากร</button></div></div><div id="cf_team_rows"></div><input id="cf_team" type="hidden" value="' + esc(v.team || '') + '"></div>' +
         '<div class="sect">09 · ความปลอดภัย ความเสี่ยง และข้อมูลเพิ่มเติม</div>' +
         '<div><label class="chk"><input id="cf_ods" type="checkbox"' + (v.ods_mis ? ' checked' : '') + '> โครงการ ODS / MIS</label></div>' +
         '<div><label for="cf_supplies">ตรวจเวชภัณฑ์ในระบบ</label><select id="cf_supplies"><option value="">— ไม่ระบุ —</option><option value="1"' + (v.supplies_checked === true ? ' selected' : '') + '>ครบ</option><option value="0"' + (v.supplies_checked === false ? ' selected' : '') + '>ไม่ครบ</option></select></div>' +
@@ -200,6 +200,8 @@
         syncTeam();
       }
       setTeam(v.team);
+      if (lookups.staffMissing) g('cf_team').parentNode.querySelector('.hint').textContent = 'ยังจำรายชื่อไว้ไม่ได้ — ให้ผู้ดูแลระบบรัน database/migration_phase3.sql ใน Supabase ก่อน (ตอนนี้พิมพ์ชื่อได้ แต่จะไม่มีรายชื่อให้เลือกครั้งหน้า)';
+
       g('cf_team_add').addEventListener('click', function () { addTeamRow('SCRUB_NURSE', '').input.focus(); });
       // ใช้ทีมเดิม: ทีมจาก Case ล่าสุดของวัน+ห้องเดียวกัน → วันเดียวกัน → Case ล่าสุดทั้งหมด
       g('cf_team_copy').addEventListener('click', async function () {
@@ -349,6 +351,25 @@
       }
 
       var api = { s2: s2, s3: s3, root: root };
+
+      // บันทึกชื่อที่พิมพ์เองและยังไม่มีในรายชื่อบุคลากร ไว้ให้เลือกครั้งหน้า (ล้มเหลวได้ ไม่กระทบการบันทึก Case)
+      api.saveNewStaff = async function () {
+        if (lookups.staffMissing) return 0;
+        var added = 0, rows = Array.prototype.slice.call(teamRows.querySelectorAll('.team-row'));
+        for (var i = 0; i < rows.length; i++) {
+          var name = rows[i].querySelector('.team-namebox input').value.trim(), role = rows[i].querySelector('.team-role').value;
+          if (!name || name.length > 200) continue;
+          if (lookups.staff.some(function (x) { return nrm(x.staff_name) === nrm(name); })) continue;
+          try {
+            var r = await OR.db.from('or_staff').insert({ staff_name: name, staff_role: role }).select('*').single();
+            if (r.error && r.error.code === '23505') r = await OR.db.from('or_staff').select('*').eq('staff_name', name).single();
+            if (r.error || !r.data) continue;
+            if (!lookups.staff.some(function (x) { return x.id === r.data.id; })) { lookups.staff.push(r.data); added++; }
+          } catch (e) { /* ข้าม */ }
+        }
+        if (added) OR.toast('จำชื่อบุคลากรใหม่ ' + added + ' คน ไว้ในรายชื่อแล้ว', 'ok');
+        return added;
+      };
 
       api.get = function () {
         var t = buildTimes().times;

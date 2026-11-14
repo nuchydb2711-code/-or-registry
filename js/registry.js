@@ -136,6 +136,7 @@
           if (errs.length) { box.innerHTML = '<div class="alert err" role="alert"><ul style="margin:0;padding-left:20px">' + errs.map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('') + '</ul></div>'; box.scrollIntoView({ block: 'nearest' }); return; }
           saving = true; OR.busy(btn, true); box.innerHTML = '';
           try {
+            await form.saveNewStaff();
             // ป้องกันเขียนทับกัน: ยอมให้แก้เฉพาะเมื่อข้อมูลยังไม่ถูกคนอื่นแก้หลังจากที่เปิดหน้านี้
             var r = await OR.db.from('surgery_cases').update(form.get()).eq('id', x.id).eq('updated_at', x.updated_at).select('id');
             if (r.error) throw r.error;

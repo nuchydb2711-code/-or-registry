@@ -78,6 +78,40 @@
     var m = (d.getFullYear() - b.getFullYear()) * 12 + d.getMonth() - b.getMonth() - (d.getDate() < b.getDate() ? 1 : 0);
     return Math.max(m, 0) + ' เดือน';
   };
+  // ---- อายุที่พิมพ์เองได้ (ใช้เมื่อไม่ทราบวันเกิด) ----
+  // แปลงอายุ (ปี/เดือน) เป็นวันเกิดโดยประมาณ ให้ได้อายุตรงกับวันที่อ้างอิง (เช่น วันผ่าตัด)
+  OR.birthFromAge = function (n, unit, on) {
+    var d = new Date((on || OR.today()) + 'T00:00:00'), y = d.getFullYear(), m = d.getMonth(), day = d.getDate();
+    if (unit === 'm') m -= n; else y -= n;
+    var last = new Date(y, m + 1, 0).getDate(), b = new Date(y, m, Math.min(day, last)), iso = OR.isoDate(b);
+    return iso > OR.today() ? OR.today() : iso;
+  };
+  OR.ageFieldHtml = function (id) {
+    return '<div><label for="' + id + '">อายุ <span class="note">(พิมพ์เองได้ถ้าไม่ทราบวันเกิด)</span></label>' +
+      '<div style="display:flex;gap:6px"><input id="' + id + '" type="number" min="0" max="120" step="1" inputmode="numeric" placeholder="เช่น 65" style="flex:1;min-width:0">' +
+      '<select id="' + id + 'u" aria-label="หน่วยอายุ" style="width:auto"><option value="y">ปี</option><option value="m">เดือน</option></select></div>' +
+      '<div class="note" id="' + id + 'n" style="margin-top:4px"></div></div>';
+  };
+  // ผูกช่องอายุกับช่องวันเกิด: มีวันเกิด → คำนวณให้และล็อกช่องอายุ · ไม่มีวันเกิด → พิมพ์อายุเองได้
+  OR.wireAge = function (id, birthId) {
+    var a = OR.$('#' + id), u = OR.$('#' + id + 'u'), n = OR.$('#' + id + 'n'), b = OR.$(birthId);
+    function sync() {
+      if (b.value) {
+        var t = OR.fmtAge(b.value), v = parseInt(t, 10);
+        if (!isNaN(v)) { a.value = v; u.value = t.indexOf('เดือน') >= 0 ? 'm' : 'y'; }
+        a.disabled = u.disabled = true; n.textContent = 'คำนวณจากวันเกิดอัตโนมัติ (ลบวันเกิดออกถ้าต้องการพิมพ์อายุเอง)';
+      } else { a.disabled = u.disabled = false; n.textContent = a.value === '' ? '' : 'ไม่มีวันเกิด: ระบบจะเก็บวันเกิดโดยประมาณจากอายุนี้'; }
+    }
+    b.addEventListener('input', sync); a.addEventListener('input', sync); sync();
+  };
+  // อ่านค่าอายุที่พิมพ์ → { n, unit } | null (ว่าง) | { error }
+  OR.readAge = function (id) {
+    var a = OR.$('#' + id), u = OR.$('#' + id + 'u');
+    if (a.disabled || a.value.trim() === '') return null;
+    var n = Number(a.value);
+    if (!/^\d{1,3}$/.test(a.value.trim()) || n > 120) return { error: 'อายุต้องเป็นจำนวนเต็ม 0–120' };
+    return { n: n, unit: u.value };
+  };
   OR.firstOfMonth = function () { var d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-01'; };
 
   /* ---------- ข้อผิดพลาด ---------- */

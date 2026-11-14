@@ -98,9 +98,9 @@
       box.innerHTML = '<div class="notfound"><h3>ไม่พบ HN ' + esc(p.hn) + ' — เพิ่มผู้ป่วยใหม่</h3><div class="grid" style="margin-top:12px">' +
         '<div class="full"><label for="pname">ชื่อ-สกุล (รวมคำนำหน้า) <span class="req">*</span></label><input id="pname" type="text" maxlength="200" value="' + esc(p.patient_name || '') + '"></div>' +
         '<div><label for="pbirth">วันเกิด</label><input id="pbirth" type="date" max="' + OR.today() + '" value="' + esc(p.birth_date || '') + '"></div>' +
-        '<div><label for="page">อายุ (คำนวณอัตโนมัติ)</label><input id="page" type="text" readonly value="' + esc(OR.fmtAge(p.birth_date)) + '"></div>' +
+        OR.ageFieldHtml('page') +
         '<div><label for="pgender">เพศ</label><select id="pgender">' + OR.enumOptions(OR.L.gender, '— เลือก —', p.gender) + '</select></div></div></div>';
-      $('#pbirth').addEventListener('input', function () { $('#page').value = OR.fmtAge(this.value); });
+      OR.wireAge('page', '#pbirth');
       $('#pname').focus();
     }
   }
@@ -123,7 +123,10 @@
     if (S.isNew) {
       var name = $('#pname').value.trim(); if (!name) errs.push('กรุณากรอกชื่อ-สกุลผู้ป่วย');
       var b = $('#pbirth').value; if (b && b > OR.today()) errs.push('วันเกิดต้องไม่เป็นวันในอนาคต');
+      var ag = OR.readAge('page'); if (ag && ag.error) errs.push(ag.error);
       S.patient.patient_name = name; S.patient.birth_date = b || null; S.patient.gender = $('#pgender').value || null;
+      // ไม่มีวันเกิดแต่พิมพ์อายุ → เก็บวันเกิดโดยประมาณ ให้ได้อายุตรงกับวันที่ผ่าตัด
+      if (!b && ag && !ag.error) S.patient.birth_date = OR.birthFromAge(ag.n, ag.unit, $('#cf_date').value || OR.today());
     }
     errs = errs.concat(form.validate()); if (errs.length) { showErr(errs); return; }
     var btn = andNew ? $('#bSaveNew') : $('#bSave'), payload = form.get();
@@ -142,6 +145,7 @@
         }
       }
       OR.busy(btn, true, 'กำลังบันทึก...');
+      await form.saveNewStaff();
       var pid = S.patient.id;
       if (S.isNew) {
         var pr = await OR.db.from('patients').insert({ hn: S.patient.hn, patient_name: S.patient.patient_name, birth_date: S.patient.birth_date, gender: S.patient.gender }).select('id,hn,patient_name,birth_date,gender,is_active').single();

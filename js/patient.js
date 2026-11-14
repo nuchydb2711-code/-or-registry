@@ -48,14 +48,17 @@
       body: '<div id="perr"></div><div class="grid" style="grid-template-columns:1fr"><div><label>HN (แก้ไม่ได้)</label><input type="text" readonly value="' + esc(p.hn) + '"></div>' +
         '<div><label for="en">ชื่อ-สกุล <span class="req">*</span></label><input id="en" type="text" maxlength="200" value="' + esc(p.patient_name) + '"></div>' +
         '<div><label for="eb">วันเกิด</label><input id="eb" type="date" max="' + OR.today() + '" value="' + esc(p.birth_date || '') + '"></div>' +
+        OR.ageFieldHtml('ea') +
         '<div><label for="eg">เพศ</label><select id="eg">' + OR.enumOptions(OR.L.gender, '— เลือก —', p.gender) + '</select></div></div>',
       buttons: [{ text: 'ยกเลิก' }, {
         text: 'บันทึก', cls: 'ok', onClick: async function (api, btn) {
           if (saving) return;
           var name = $('#en').value.trim(); if (!name) { $('#perr').innerHTML = '<div class="alert err">กรุณากรอกชื่อ-สกุล</div>'; return; }
+          var ag = OR.readAge('ea'); if (ag && ag.error) { $('#perr').innerHTML = '<div class="alert err">' + esc(ag.error) + '</div>'; return; }
+          var birth = $('#eb').value || (ag ? OR.birthFromAge(ag.n, ag.unit) : null);   // พิมพ์เฉพาะอายุ → วันเกิดโดยประมาณ (นับจากวันนี้)
           saving = true; OR.busy(btn, true);
           try {
-            var r = await OR.db.from('patients').update({ patient_name: name, birth_date: $('#eb').value || null, gender: $('#eg').value || null }).eq('id', p.id).eq('updated_at', p.updated_at).select('id');
+            var r = await OR.db.from('patients').update({ patient_name: name, birth_date: birth, gender: $('#eg').value || null }).eq('id', p.id).eq('updated_at', p.updated_at).select('id');
             if (r.error) throw r.error;
             if (!r.data.length) throw new Error('ข้อมูลถูกแก้ไขโดยผู้อื่นแล้ว หรือไม่มีสิทธิ์ กรุณาโหลดหน้าใหม่');
             OR.toast('บันทึกสำเร็จ', 'ok'); m.close(); load();
@@ -63,6 +66,7 @@
         }
       }]
     });
+    OR.wireAge('ea', '#eb');
   }
   load();
 })();
