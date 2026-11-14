@@ -14,6 +14,72 @@
     return (timeStr >= oh.start && timeStr < oh.end) ? 'IN_HOURS' : 'OUT_HOURS';
   }
 
+
+  /* ---------- ช่องคลิกเลือก/พิมพ์ค้นหา (ใช้ซ้ำ: ศัลยแพทย์ วิสัญญี รายชื่อทีม) ---------- */
+  var cbSeq = 0;
+  function nrm(s) { return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+  // o: {items(): [{id,label,sub}], onPick(item), onClear(), create(text): Promise<item>, free: true=เก็บข้อความที่พิมพ์ไว้แม้ไม่ได้เลือก, placeholder}
+  OR.combobox = function (host, o) {
+    var uid = 'cb' + (++cbSeq), cur = null, shown = [], active = -1, qText = '';
+    host.classList.add('combo');
+    host.innerHTML = '<input type="text" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="' + uid + '" placeholder="' + esc(o.placeholder || '') + '"><button type="button" class="combo-x" hidden aria-label="ล้าง">×</button><ul class="combo-list" id="' + uid + '" role="listbox" hidden></ul>';
+    var inp = host.querySelector('input'), clr = host.querySelector('.combo-x'), list = host.querySelector('ul');
+    function close() { list.hidden = true; inp.setAttribute('aria-expanded', 'false'); active = -1; }
+    function showClear() { clr.hidden = !inp.value; }
+    function render(q) {
+      qText = q; var toks = nrm(q).split(' ').filter(Boolean);
+      var pool = o.items().filter(function (it) { var h = nrm(it.label + ' ' + (it.sub || '')); return toks.every(function (t) { return h.indexOf(t) >= 0; }); });
+      shown = pool.slice(0, 80); var html = '';
+      shown.forEach(function (it, i) { html += '<li role="option" data-i="' + i + '"><span>' + esc(it.label) + '</span>' + (it.sub ? '<small>' + esc(it.sub) + '</small>' : '') + '</li>'; });
+      var exact = o.items().some(function (it) { return nrm(it.label) === nrm(q); });
+      if (o.create && q.trim() && !exact) html += '<li class="add" data-add="1">＋ เพิ่ม “' + esc(q.trim()) + '” เป็นรายชื่อใหม่</li>';
+      if (!shown.length && !(o.create && q.trim() && !exact)) html = '<li class="none">' + (q.trim() ? 'ไม่พบรายชื่อ' : 'ยังไม่มีรายชื่อให้เลือก') + (o.free ? ' — พิมพ์ชื่อแล้วใช้ได้เลย' : '') + '</li>';
+      else if (pool.length > shown.length) html += '<li class="none">แสดง ' + shown.length + ' จาก ' + pool.length + ' รายการ พิมพ์เพิ่มเพื่อกรอง</li>';
+      list.innerHTML = html; list.hidden = false; inp.setAttribute('aria-expanded', 'true'); active = -1;
+    }
+    function hi(i) { var lis = list.querySelectorAll('li[data-i],li[data-add]'); if (!lis.length) return; active = (i + lis.length) % lis.length; lis.forEach(function (li, k) { li.classList.toggle('on', k === active); }); lis[active].scrollIntoView({ block: 'nearest' }); }
+    function pick(it) { cur = it; inp.value = it.label; showClear(); close(); if (o.onPick) o.onPick(it); }
+    async function add() {
+      var t = qText.trim(); if (!t || !o.create) return;
+      try { var it = await o.create(t); if (it) pick(it); } catch (e) { OR.toast(OR.errMsg(e), 'err'); }
+    }
+    function choose(li) { if (!li) return; if (li.dataset.add) add(); else if (li.dataset.i != null) pick(shown[+li.dataset.i]); }
+    inp.addEventListener('focus', function () { inp.select(); render(''); });
+    inp.addEventListener('click', function () { if (list.hidden) render(inp.value === (cur && cur.label) ? '' : inp.value); });
+    inp.addEventListener('input', function () { cur = null; showClear(); if (o.onClear) o.onClear(inp.value); render(inp.value); });
+    inp.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); if (list.hidden) render(inp.value); hi(active + 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); hi(active - 1); }
+      else if (e.key === 'Enter') { if (!list.hidden) { var lis = list.querySelectorAll('li[data-i],li[data-add]'); var li = lis[active >= 0 ? active : (shown.length === 1 && lis.length === 1 ? 0 : -1)]; if (li) { e.preventDefault(); e.stopPropagation(); choose(li); } } }
+      else if (e.key === 'Escape') { close(); if (cur) inp.value = cur.label; }
+    });
+    list.addEventListener('mousedown', function (e) { e.preventDefault(); choose(e.target.closest('li')); });
+    inp.addEventListener('blur', function () { setTimeout(function () { close(); if (cur) inp.value = cur.label; else if (!o.free) inp.value = ''; showClear(); }, 120); });
+    clr.addEventListener('click', function () { cur = null; inp.value = ''; showClear(); if (o.onClear) o.onClear(''); inp.focus(); });
+    return {
+      input: inp,
+      set: function (it) { cur = it || null; inp.value = it ? it.label : ''; showClear(); },
+      text: function () { return inp.value.trim(); }
+    };
+  };
+
+  // แปลง <select> ยาว ๆ ให้คลิกเลือกหรือพิมพ์ค้นหาได้ (select เดิมยังเก็บค่าไว้ จึงไม่ต้องแก้ส่วนอื่น)
+  OR.enhanceSelect = function (sel, placeholder) {
+    var host = document.createElement('div'); sel.parentNode.insertBefore(host, sel); sel.hidden = true;
+    var lab = sel.parentNode.querySelector('label[for="' + sel.id + '"]');
+    function fire() { sel.dispatchEvent(new Event('change', { bubbles: true })); }
+    var cb = OR.combobox(host, {
+      placeholder: placeholder,
+      items: function () { return Array.prototype.filter.call(sel.options, function (op) { return op.value; }).map(function (op) { return { id: op.value, label: op.textContent }; }); },
+      onPick: function (it) { sel.value = it.id; fire(); },
+      onClear: function () { if (sel.value) { sel.value = ''; fire(); } }
+    });
+    cb.input.id = sel.id + '_q'; if (lab) lab.setAttribute('for', cb.input.id);
+    function sync() { var op = sel.selectedOptions[0]; cb.set(op && op.value ? { id: op.value, label: op.textContent } : null); }
+    new MutationObserver(sync).observe(sel, { childList: true });
+    sync(); return cb;
+  };
+
   OR.caseForm = {
     // lookups: ข้อมูลหลัก, ctx: {role}, v: ค่าเดิม (แถวจาก v_surgery_cases หรือ surgery_cases) ถ้าแก้ไข
     create: function (lookups, ctx, v) {
@@ -64,7 +130,7 @@
         '<div><label for="cf_period">ในเวลา / นอกเวลา</label><select id="cf_period">' + OR.enumOptions(OR.L.period, '— ไม่ระบุ —', v.work_period) + '</select><div class="hint" id="cf_period_hint"></div></div>' +
         '<div><label for="cf_ward">Ward</label><input id="cf_ward" type="text" maxlength="60" value="' + esc(v.ward || '') + '"></div>' +
         '<div class="sect">08 · ทีมผ่าตัด (OR Team)</div>' +
-        '<div class="full team-panel"><div class="team-head"><div><label>ทีมผ่าตัด (OR Team)</label><div class="hint">เลือกบทบาทและระบุชื่อผู้ปฏิบัติงาน เพิ่มได้หลายคน ระบบจะบันทึกชื่อพร้อมตำแหน่ง</div></div><button class="btn sm" id="cf_team_add" type="button">＋ เพิ่มบุคลากร</button></div><div id="cf_team_rows"></div><input id="cf_team" type="hidden" value="' + esc(v.team || '') + '"></div>' +
+        '<div class="full team-panel"><div class="team-head"><div><label>ทีมผ่าตัด (OR Team)</label><div class="hint">คลิกช่องชื่อเพื่อเลือกจากรายชื่อ หรือพิมพ์ค้นหา · ไม่มีชื่อ พิมพ์แล้วกด “＋ เพิ่ม” ได้เลย</div></div><div class="team-tools"><button class="btn sm" id="cf_team_copy" type="button" title="ใช้ทีมจาก Case ล่าสุดของวัน/ห้องเดียวกัน">⎘ ใช้ทีมเดิม</button><button class="btn sm" id="cf_team_add" type="button">＋ เพิ่มบุคลากร</button></div></div><div id="cf_team_rows"></div><input id="cf_team" type="hidden" value="' + esc(v.team || '') + '"></div>' +
         '<div class="sect">09 · ความปลอดภัย ความเสี่ยง และข้อมูลเพิ่มเติม</div>' +
         '<div><label class="chk"><input id="cf_ods" type="checkbox"' + (v.ods_mis ? ' checked' : '') + '> โครงการ ODS / MIS</label></div>' +
         '<div><label for="cf_supplies">ตรวจเวชภัณฑ์ในระบบ</label><select id="cf_supplies"><option value="">— ไม่ระบุ —</option><option value="1"' + (v.supplies_checked === true ? ' selected' : '') + '>ครบ</option><option value="0"' + (v.supplies_checked === false ? ' selected' : '') + '>ไม่ครบ</option></select></div>' +
@@ -78,37 +144,78 @@
       // s2/s3 อาจถูกย้ายไปแสดงคนละหน้าจอ (ขั้นตอน 2 / 3) จึงค้นจากสองส่วนนี้โดยตรง ไม่ใช้ root
       var g = function (id) { return s2.querySelector('#' + id) || s3.querySelector('#' + id); };
 
-      /* ----- ทีมผ่าตัด: เลือกบทบาท + ระบุชื่อ บันทึกลงคอลัมน์ team เดิมเพื่อไม่ต้องแก้ฐานข้อมูล ----- */
-      var teamRoles = [
-        ['SURGICAL_ASSISTANT', 'Surgical Assistant'],
-        ['SCRUB_NURSE', 'Scrub Nurse'],
-        ['CIRCULATING_NURSE', 'Circulating Nurse'],
-        ['NA', 'NA'],
-        ['ANESTHESIOLOGIST', 'Anesthesiologist'],
-        ['ANESTHESIA_NURSE', 'Anesthesia Nurse'],
-        ['OTHER', 'Other / Legacy']
-      ];
+      /* ----- ทีมผ่าตัด: เลือกชื่อจากรายชื่อบุคลากร (คลิก/พิมพ์ค้นหา) เพิ่มชื่อใหม่ได้ทันที
+             บันทึกลงคอลัมน์ team เดิมเป็นข้อความ "ตำแหน่ง: ชื่อ | ..." จึงไม่ต้องแก้โครงสร้างข้อมูล ----- */
+      var teamRoles = Object.keys(OR.L.teamRole).map(function (k) { return [k, OR.L.teamRole[k]]; });
       var teamRows = g('cf_team_rows');
-      function addTeamRow(role, name) {
-        var row = document.createElement('div'); row.className = 'team-row';
-        row.innerHTML = '<select aria-label="ตำแหน่งในทีม" class="team-role">' + teamRoles.map(function (r) { return '<option value="' + r[0] + '"' + (r[0] === (role || 'SCRUB_NURSE') ? ' selected' : '') + '> ' + r[1] + '</option>'; }).join('') + '</select>' +
-          '<input class="team-name" type="text" maxlength="120" placeholder="ชื่อ-สกุลบุคลากร" aria-label="ชื่อบุคลากร" value="' + esc(name || '') + '">' +
-          '<button class="team-remove" type="button" aria-label="ลบบุคลากร" title="ลบ">×</button>';
-        row.querySelector('.team-remove').addEventListener('click', function () { row.remove(); syncTeam(); });
-        row.querySelectorAll('select,input').forEach(function (el) { el.addEventListener('change', syncTeam); el.addEventListener('input', syncTeam); });
-        teamRows.appendChild(row); syncTeam();
-      }
+      function roleLabel(k) { return OR.L.teamRole[k] || k; }
       function syncTeam() {
         var lines = Array.prototype.slice.call(teamRows.querySelectorAll('.team-row')).map(function (row) {
-          var role = row.querySelector('.team-role'), name = row.querySelector('.team-name').value.trim();
-          var label = (teamRoles.filter(function (r) { return r[0] === role.value; })[0] || teamRoles[4])[1];
-          return name ? label + ': ' + name : '';
+          var name = row.querySelector('.team-namebox input').value.trim();
+          return name ? roleLabel(row.querySelector('.team-role').value) + ': ' + name : '';
         }).filter(Boolean);
         g('cf_team').value = lines.join(' | ');
       }
-      var oldTeam = (v.team || '').trim();
-      if (oldTeam) addTeamRow('OTHER', oldTeam); else addTeamRow('SURGICAL_ASSISTANT', '');
-      g('cf_team_add').addEventListener('click', function () { addTeamRow('SURGICAL_ASSISTANT', ''); });
+      function addTeamRow(role, name) {
+        var row = document.createElement('div'); row.className = 'team-row';
+        row.innerHTML = '<select aria-label="ตำแหน่งในทีม" class="team-role">' + teamRoles.map(function (r) { return '<option value="' + r[0] + '"' + (r[0] === (role || 'SCRUB_NURSE') ? ' selected' : '') + '>' + esc(r[1]) + '</option>'; }).join('') + '</select>' +
+          '<div class="team-namebox"></div><button class="team-remove" type="button" aria-label="ลบบุคลากร" title="ลบ">×</button>';
+        var roleSel = row.querySelector('.team-role');
+        var cb = OR.combobox(row.querySelector('.team-namebox'), {
+          placeholder: 'คลิกเลือก หรือพิมพ์ชื่อ...', free: true,
+          items: function () {   // ชื่อที่ตำแหน่งตรงกับแถวนี้ขึ้นก่อน
+            var r = roleSel.value, st = (lookups.staff || []).filter(function (x) { return x.is_active; });
+            st.sort(function (a, b) { return (b.staff_role === r) - (a.staff_role === r) || a.staff_name.localeCompare(b.staff_name, 'th'); });
+            return st.map(function (x) { return { id: x.id, label: x.staff_name, sub: roleLabel(x.staff_role), role: x.staff_role }; });
+          },
+          onPick: function (it) { if (it.role && it.role !== 'OTHER') roleSel.value = it.role; syncTeam(); },
+          onClear: syncTeam,
+          create: lookups.staffMissing ? null : async function (text) {
+            var r = await OR.db.from('or_staff').insert({ staff_name: text, staff_role: roleSel.value }).select('*').single();
+            if (r.error && r.error.code === '23505') { r = await OR.db.from('or_staff').select('*').eq('staff_name', text).single(); }
+            if (r.error) throw r.error;
+            if (!lookups.staff.some(function (x) { return x.id === r.data.id; })) lookups.staff.push(r.data);
+            OR.toast('เพิ่ม “' + text + '” ในรายชื่อบุคลากรแล้ว', 'ok');
+            return { id: r.data.id, label: r.data.staff_name, sub: roleLabel(r.data.staff_role), role: r.data.staff_role };
+          }
+        });
+        cb.input.setAttribute('aria-label', 'ชื่อบุคลากร'); cb.input.value = name || ''; if (name) cb.set({ id: null, label: name });
+        cb.input.addEventListener('input', syncTeam); cb.input.addEventListener('blur', function () { setTimeout(syncTeam, 200); });
+        roleSel.addEventListener('change', syncTeam);
+        row.querySelector('.team-remove').addEventListener('click', function () { row.remove(); syncTeam(); });
+        teamRows.appendChild(row); syncTeam(); return cb;
+      }
+      function parseTeam(str) {
+        var out = [];
+        String(str || '').split('|').forEach(function (part) {
+          part = part.trim(); if (!part) return;
+          var m = part.match(/^([^:]{1,40}):\s*(.+)$/), r = m && teamRoles.filter(function (x) { return x[1].toLowerCase() === m[1].trim().toLowerCase(); })[0];
+          out.push(r ? [r[0], m[2].trim()] : ['OTHER', part]);
+        });
+        return out;
+      }
+      function setTeam(str) {
+        teamRows.innerHTML = ''; var rows = parseTeam(str);
+        if (!rows.length) addTeamRow('SURGICAL_ASSISTANT', ''); else rows.forEach(function (r) { addTeamRow(r[0], r[1]); });
+        syncTeam();
+      }
+      setTeam(v.team);
+      g('cf_team_add').addEventListener('click', function () { addTeamRow('SCRUB_NURSE', '').input.focus(); });
+      // ใช้ทีมเดิม: ทีมจาก Case ล่าสุดของวัน+ห้องเดียวกัน → วันเดียวกัน → Case ล่าสุดทั้งหมด
+      g('cf_team_copy').addEventListener('click', async function () {
+        var btn = this, date = g('cf_date').value, room = g('cf_room').value;
+        async function latest(f) { var b = OR.db.from('surgery_cases').select('case_number,team').not('team', 'is', null).order('created_at', { ascending: false }).limit(1); return f ? f(b) : b; }
+        btn.disabled = true;
+        try {
+          var r = null;
+          if (date && room) r = await latest(function (b) { return b.eq('surgery_date', date).eq('room_id', room); });
+          if (!r || r.error || !r.data.length) r = date ? await latest(function (b) { return b.eq('surgery_date', date); }) : null;
+          if (!r || r.error || !r.data.length) r = await latest();
+          if (r.error) throw r.error;
+          if (!r.data.length) { OR.toast('ยังไม่มีทีมที่เคยบันทึกไว้', ''); return; }
+          setTeam(r.data[0].team); OR.toast('ใช้ทีมจาก Case ' + r.data[0].case_number + ' (แก้ไขได้)', 'ok');
+        } catch (e) { OR.toast(OR.errMsg(e), 'err'); } finally { btn.disabled = false; }
+      });
 
       /* ----- dropdown ที่ขึ้นกับข้อมูลหลัก ----- */
       g('cf_dept').innerHTML = OR.options(lookups.departments.filter(function (d) { return d.is_active || d.id === v.department_id; }), function (d) { return d.id; }, function (d) { return d.department_name; }, '— เลือกแผนก —', v.department_id);
@@ -127,6 +234,8 @@
         g('cf_surgeon_hint').textContent = dept && !inDept.length ? 'แผนกนี้ยังไม่มีศัลยแพทย์ที่ผูกไว้ แสดงศัลยแพทย์ทั้งหมด (ผูกแพทย์กับแผนกได้ที่ ตั้งค่า)' : '';
       }
       fillDeptDependent(v.operation_code_id, v.surgeon_id);
+      OR.enhanceSelect(g('cf_surgeon'), 'คลิกเลือก หรือพิมพ์ชื่อศัลยแพทย์');
+      OR.enhanceSelect(g('cf_anes'), 'คลิกเลือก หรือพิมพ์ชื่อ');
       g('cf_dept').addEventListener('change', function () { fillDeptDependent(null, null); });
       g('cf_opcode').addEventListener('change', function () {
         var o = lookups.opcodes.filter(function (x) { return x.id === g('cf_opcode').value; })[0];
@@ -207,6 +316,22 @@
       ['cf_date', 'cf_arrive', 'cf_start'].forEach(function (id) { g(id).addEventListener('change', autoPeriod); });
       if (!v.id) autoPeriod();
 
+      /* ----- ปุ่ม "ตอนนี้": ใส่เวลาปัจจุบันด้วยการแตะครั้งเดียว ----- */
+      ['cf_ertime', 'cf_arrive', 'cf_start', 'cf_end', 'cf_recov'].forEach(function (id) {
+        var inp = g(id), box = document.createElement('div'), b = document.createElement('button');
+        box.className = 'timebox'; inp.parentNode.insertBefore(box, inp); box.appendChild(inp);
+        b.type = 'button'; b.className = 'now'; b.textContent = 'ตอนนี้'; b.title = 'ใส่เวลาปัจจุบัน';
+        b.addEventListener('click', function () {
+          var d = new Date(); inp.value = OR.pad(d.getHours()) + ':' + OR.pad(d.getMinutes());
+          inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        box.appendChild(b);
+      });
+      // กรอกเวลาสิ้นสุดผ่าตัดแล้ว สถานะ "กำลังดำเนินการ" เปลี่ยนเป็น "เสร็จสิ้น" ให้เอง (แก้ไขได้)
+      g('cf_end').addEventListener('change', function () {
+        if (g('cf_end').value && g('cf_status').value === 'IN_PROGRESS' && !g('cf_status').disabled) { g('cf_status').value = 'COMPLETED'; g('cf_status').dispatchEvent(new Event('change', { bubbles: true })); OR.toast('ตั้งสถานะเป็น “เสร็จสิ้น” ให้แล้ว', ''); }
+      });
+
       /* ----- แปลงเวลา HH:MM เป็น timestamp (ข้ามเที่ยงคืนได้) ----- */
       function buildTimes() {
         var date = g('cf_date').value, out = {}, errs = [], prev = null;
@@ -276,6 +401,7 @@
         return e;
       };
       api.focusDate = function () { g('cf_date').focus(); };
+      api.focusFirst = function () { var q = g('cf_opsearch'); if (q) q.focus(); };
       return api;
     }
   };

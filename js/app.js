@@ -23,6 +23,7 @@
     },
     role: { ADMIN: 'ผู้ดูแลระบบ', STAFF: 'เจ้าหน้าที่', VIEWER: 'ผู้ดู' },
     docType: { SURGEON: 'ศัลยแพทย์', ANESTHESIOLOGIST: 'วิสัญญีแพทย์' },
+    teamRole: { SURGICAL_ASSISTANT: 'Surgical Assistant', SCRUB_NURSE: 'Scrub Nurse', CIRCULATING_NURSE: 'Circulating Nurse', NA: 'NA', ANESTHESIOLOGIST: 'Anesthesiologist', ANESTHESIA_NURSE: 'Anesthesia Nurse', OTHER: 'Other / Legacy' },
     anGroup: { GA: 'GA (GA+TIVA+IVS)', RA: 'RA (BB+SB)', LA: 'LA (LA+MAC)', OTHER: 'อื่น ๆ' }
   };
   OR.lab = function (map, k) { return (k && map[k]) || (k ? k : '-'); };
@@ -174,7 +175,9 @@
     var q = function (t, o) { return OR.db.from(t).select('*').order(o); };
     var r = await Promise.all([q('departments', 'department_name'), q('doctors', 'doctor_name'), q('or_rooms', 'room_number'), q('anesthesia_types', 'anesthesia_code'), OR.db.from('operation_codes').select('*').order('sort_order')]);
     for (var i = 0; i < r.length; i++) if (r[i].error) throw r[i].error;
-    OR.lookups = { departments: r[0].data, doctors: r[1].data, rooms: r[2].data, anesthesia: r[3].data, opcodes: r[4].data };
+    // รายชื่อทีมผ่าตัด: ถ้ายังไม่ได้รัน migration_phase3.sql ให้ใช้งานต่อได้ (พิมพ์ชื่อเองได้ แต่ยังไม่มีรายชื่อให้เลือก)
+    var st = await OR.db.from('or_staff').select('*').order('staff_name');
+    OR.lookups = { departments: r[0].data, doctors: r[1].data, rooms: r[2].data, anesthesia: r[3].data, opcodes: r[4].data, staff: st.error ? [] : st.data, staffMissing: !!st.error };
     return OR.lookups;
   };
   OR.options = function (list, val, lab, placeholder, selected) {

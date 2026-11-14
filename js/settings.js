@@ -6,7 +6,7 @@
   var $ = OR.$, esc = OR.esc, lookups;
   try { lookups = await OR.loadLookups(true); } catch (e) { OR.fatal('โหลดข้อมูลหลักไม่สำเร็จ: ' + OR.errMsg(e)); return; }
 
-  var TABS = [['users', 'ผู้ใช้งาน'], ['doctors', 'แพทย์'], ['departments', 'แผนก'], ['rooms', 'ห้องผ่าตัด'], ['anesthesia', 'การระงับความรู้สึก'], ['opcodes', 'Code operation'], ['audit', 'Audit Log']];
+  var TABS = [['users', 'ผู้ใช้งาน'], ['doctors', 'แพทย์'], ['staff', 'บุคลากรทีมผ่าตัด'], ['departments', 'แผนก'], ['rooms', 'ห้องผ่าตัด'], ['anesthesia', 'การระงับความรู้สึก'], ['opcodes', 'Code operation'], ['audit', 'Audit Log']];
   var tab = 'users', opDept = lookups.departments[0] ? lookups.departments[0].id : '';
   var main = document.getElementById('main');
   main.innerHTML = '<div class="pagehead"><div><h1>ตั้งค่าระบบ</h1><p>จัดการผู้ใช้และข้อมูลหลัก (ไม่มีการลบ ใช้การปิดใช้งานแทน)</p></div></div><div class="tabs" id="tabs"></div><div id="out"></div>';
@@ -23,6 +23,9 @@
     doctors: { table: 'doctors', order: 'doctor_name', add: 'เพิ่มแพทย์',
       head: ['ชื่อแพทย์', 'ประเภท', 'แผนก'], cells: function (x) { return [esc(x.doctor_name), esc(OR.L.docType[x.doctor_type]), esc(dname(x.department_id))]; },
       fields: [{ k: 'doctor_name', l: 'ชื่อแพทย์ (พร้อมคำนำหน้า)', t: 'text', req: 1 }, { k: 'doctor_type', l: 'ประเภท', t: 'enum', map: OR.L.docType, req: 1 }, { k: 'department_id', l: 'แผนก (ศัลยแพทย์ควรระบุ)', t: 'dept' }] },
+    staff: { table: 'or_staff', order: 'staff_name', add: 'เพิ่มบุคลากร',
+      head: ['ชื่อ-สกุล', 'ตำแหน่งหลัก'], cells: function (x) { return [esc(x.staff_name), esc(OR.L.teamRole[x.staff_role])]; },
+      fields: [{ k: 'staff_name', l: 'ชื่อ-สกุล (พร้อมคำนำหน้า)', t: 'text', req: 1 }, { k: 'staff_role', l: 'ตำแหน่งหลัก (ตั้งค่าเริ่มต้นเมื่อเลือกชื่อ)', t: 'enum', map: OR.L.teamRole, req: 1 }] },
     departments: { table: 'departments', order: 'department_name', add: 'เพิ่มแผนก',
       head: ['ชื่อแผนก', 'รหัส'], cells: function (x) { return [esc(x.department_name), esc(x.department_code)]; },
       fields: [{ k: 'department_name', l: 'ชื่อแผนก', t: 'text', req: 1 }, { k: 'department_code', l: 'รหัสแผนก (ภาษาอังกฤษ ไม่ซ้ำ)', t: 'text', req: 1 }] },
@@ -164,7 +167,7 @@
     var r = await q.order('created_at', { ascending: false }).order('id', { ascending: false }).range(page * PAGE, page * PAGE + PAGE - 1); if (r.error) throw r.error;
     var ids = r.data.map(function (a) { return a.user_id; }).filter(function (u, i, a) { return u && a.indexOf(u) === i; }), us = {};
     if (ids.length) { var p = await OR.db.from('profiles').select('id,full_name,email').in('id', ids); (p.data || []).forEach(function (u) { us[u.id] = u.full_name || u.email; }); }
-    var tables = ['patients', 'surgery_cases', 'doctors', 'departments', 'or_rooms', 'anesthesia_types', 'operation_codes', 'profiles'];
+    var tables = ['patients', 'surgery_cases', 'doctors', 'or_staff', 'departments', 'or_rooms', 'anesthesia_types', 'operation_codes', 'profiles'];
     var pages = Math.max(1, Math.ceil((r.count || 0) / PAGE));
     $('#out').innerHTML = '<div class="card"><h2>Audit Log</h2><p class="note">บันทึกอัตโนมัติทุกการเพิ่ม/แก้ไข แก้ไขหรือลบไม่ได้</p><div class="toolbar"><div><label for="at">ตาราง</label><select id="at"><option value="">ทั้งหมด</option>' + tables.map(function (t) { return '<option' + (t === auditTable ? ' selected' : '') + '>' + t + '</option>'; }).join('') + '</select></div></div>' +
       listHtml(['เวลา', 'ผู้ทำ', 'การกระทำ', 'ตาราง', 'รหัสรายการ', 'สิ่งที่เปลี่ยน'], r.data.map(function (a) { return '<tr><td>' + OR.fmtDateTime(a.created_at) + '</td><td>' + OR.dash(us[a.user_id] || (a.user_id ? '' : 'ระบบ/ผู้ดูแล DB')) + '</td><td>' + esc(a.action) + '</td><td>' + esc(a.table_name) + '</td><td>' + esc(String(a.record_id || '').slice(0, 8)) + '</td><td>' + esc(OR.auditChanges(a).join(', ')) + '</td></tr>'; })) +
