@@ -6,7 +6,7 @@
 // ห้ามใส่ service_role key เด็ดขาด — ระบบจะปฏิเสธการทำงานถ้าพบ
 // =====================================================================
 window.OR_CONFIG = {
-  SUPABASE_URL: 'https://necbvecmxdahzisdiekg.supabase.co/rest/v1/',
+  SUPABASE_URL: 'https://necbvecmxdahzisdiekg.supabase.co',
   SUPABASE_ANON_KEY: 'sb_publishable_vxN2VvxCBYQVS0RX27W0Xg_DgHNXMdI',
 
   // ออกจากระบบอัตโนมัติเมื่อไม่มีการใช้งาน (นาที) — เครื่องกลางในห้องผ่าตัดควรตั้งไว้
