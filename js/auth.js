@@ -25,6 +25,15 @@
     location.href = 'login.html' + (reason ? '?r=idle' : '');
   };
 
+  // หาหน้าแรกของผู้ใช้ที่ login อยู่ (ใช้หลังเข้าสู่ระบบ)
+  OR.auth.home = async function () {
+    try {
+      var s = await OR.db.auth.getSession(); if (!s.data.session) return 'dashboard.html';
+      var p = await OR.db.from('profiles').select('role,is_active').eq('id', s.data.session.user.id).maybeSingle();
+      return p.data && p.data.is_active ? OR.homeFor(p.data.role) : 'dashboard.html';
+    } catch (e) { return 'dashboard.html'; }
+  };
+
   // คืน {user, profile, role} หรือ null (และพาไปหน้า login / แสดงข้อความ)
   OR.auth.require = async function (roles) {
     var s = await OR.db.auth.getSession();

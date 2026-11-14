@@ -97,6 +97,8 @@
     if (c === '23503') return 'ข้อมูลอ้างอิงไม่ถูกต้องหรือยังถูกใช้งานอยู่';
     if (c === '42501' || /row-level security|permission denied/i.test(m)) return /ADMIN|เฉพาะ/.test(m) && c === '42501' ? m : 'คุณไม่มีสิทธิ์ทำรายการนี้';
     if (c === 'PGRST301' || /JWT/i.test(m)) return 'หมดเวลาเข้าสู่ระบบ กรุณา login ใหม่';
+    if (/Invalid path specified/i.test(m)) return 'ค่า SUPABASE_URL ใน js/config.js ไม่ถูกต้อง ต้องเป็นรูปแบบ https://xxxxxxxx.supabase.co เท่านั้น (ไม่มี / หรือข้อความต่อท้าย)';
+    if (/Invalid API key|No API key/i.test(m)) return 'ค่า SUPABASE_ANON_KEY ใน js/config.js ไม่ถูกต้อง ให้คัดลอก anon public key จาก Project Settings → API มาใหม่ทั้งหมด';
     if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'เชื่อมต่ออินเทอร์เน็ตหรือเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจสอบเครือข่ายแล้วลองใหม่';
     return m;
   };
@@ -209,13 +211,15 @@
     ['reports.html', 'รายงาน', ['ADMIN', 'STAFF', 'VIEWER']],
     ['settings.html', 'ตั้งค่า', ['ADMIN']]
   ];
+  // หน้าแรกของแต่ละบทบาท: ADMIN/STAFF = ลงทะเบียน Case, VIEWER = ภาพรวม (ไม่มีสิทธิ์ลงทะเบียน)
+  OR.homeFor = function (role) { return role === 'ADMIN' || role === 'STAFF' ? 'new-case.html' : 'dashboard.html'; };
   OR.mountShell = function (ctx, page) {
     var el = document.getElementById('topbar'); if (!el) return;
     var links = NAV.filter(function (n) { return n[2].indexOf(ctx.role) >= 0; }).map(function (n) {
       return '<a href="' + n[0] + '"' + (n[0] === page ? ' class="on" aria-current="page"' : '') + '>' + n[1] + '</a>';
     }).join('');
     el.className = 'topbar';
-    el.innerHTML = '<div class="topbar-in"><a class="brand" href="new-case.html"><i>✚</i>OR Registry</a><nav class="nav">' + links +
+    el.innerHTML = '<div class="topbar-in"><a class="brand" href="' + OR.homeFor(ctx.role) + '"><i>✚</i>OR Registry</a><nav class="nav">' + links +
       '</nav><div class="userbox"><span class="nm"><b>' + OR.esc(ctx.profile.full_name || ctx.user.email) + '</b></span><span class="role">' + OR.esc(OR.L.role[ctx.role]) +
       '</span><button class="btn sm" id="btnLogout" type="button">ออกจากระบบ</button></div></div>';
     document.getElementById('btnLogout').onclick = function () { OR.auth.signOut(); };

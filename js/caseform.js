@@ -34,7 +34,7 @@
         '<div><label for="cf_urgency">ความเร่งด่วน</label><select id="cf_urgency">' + OR.enumOptions(OR.L.urgency, false, v.urgency || 'ELECTIVE') + '</select></div>' +
         '<div><label class="chk" style="margin-top:22px"><input id="cf_er" type="checkbox"' + (v.from_er ? ' checked' : '') + '> รับผู้ป่วยจาก ER</label></div>' +
         '<div><label for="cf_dept">แผนก <span class="req">*</span></label><select id="cf_dept"></select></div>' +
-        '<div><label for="cf_opcode">Code operation (ใช้นับยอดรายเดือน)</label><select id="cf_opcode"></select></div>' +
+        '<div><label for="cf_opsearch">Code operation (ใช้นับยอดรายเดือน)</label><div class="combo"><input id="cf_opsearch" type="text" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="cf_oplist" placeholder="พิมพ์ค้นหา เช่น Sx04 หรือ appendectomy"><button type="button" class="combo-x" id="cf_opclear" aria-label="ล้าง Code operation" hidden>×</button><ul class="combo-list" id="cf_oplist" role="listbox" hidden></ul></div><select id="cf_opcode" hidden></select></div>' +
         '<div class="sect">02 · ข้อมูลการวินิจฉัยและรายการผ่าตัด</div>' +
         '<div class="full"><label for="cf_dx">Diagnosis <span class="req">*</span></label><input id="cf_dx" type="text" maxlength="300" value="' + esc(v.diagnosis || '') + '"></div>' +
         '<div class="full"><label for="cf_op">Operation <span class="req">*</span></label><input id="cf_op" type="text" maxlength="300" value="' + esc(v.operation_name || '') + '"></div>' +
@@ -132,6 +132,60 @@
         var o = lookups.opcodes.filter(function (x) { return x.id === g('cf_opcode').value; })[0];
         if (o && !g('cf_op').value.trim()) g('cf_op').value = o.operation_name;
       });
+
+      /* ----- Code operation: ช่องพิมพ์ค้นหา (ค่าจริงเก็บใน select ที่ซ่อนไว้) ----- */
+      var oIn = g('cf_opsearch'), oList = g('cf_oplist'), oClear = g('cf_opclear'), oSel = g('cf_opcode'), oActive = -1, oItems = [];
+      function norm(s) { return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+      function opLabel(o) { return o.op_code + ' — ' + o.operation_name; }
+      function opById(id) { return lookups.opcodes.filter(function (x) { return x.id === id; })[0]; }
+      function syncOpText() {
+        var o = opById(oSel.value); oIn.value = o ? opLabel(o) : '';
+        oClear.hidden = !o;
+        oIn.placeholder = g('cf_dept').value ? 'พิมพ์ค้นหา เช่น Sx04 หรือ appendectomy' : 'เลือกแผนกก่อน หรือพิมพ์ค้นหาจากทุกแผนก';
+      }
+      function opClose() { oList.hidden = true; oIn.setAttribute('aria-expanded', 'false'); oActive = -1; }
+      function opRender(query) {
+        var dept = g('cf_dept').value, tokens = norm(query).split(' ').filter(Boolean);
+        var pool = lookups.opcodes.filter(function (o) { return (o.is_active || o.id === oSel.value) && (!dept || o.department_id === dept); });
+        oItems = pool.filter(function (o) { var h = norm(o.op_code + ' ' + o.operation_name); return tokens.every(function (t) { return h.indexOf(t) >= 0; }); });
+        var shown = oItems.slice(0, 60), html = '';
+        shown.forEach(function (o, i) {
+          var dn = !dept ? (lookups.departments.filter(function (d) { return d.id === o.department_id; })[0] || {}).department_name : '';
+          html += '<li role="option" data-i="' + i + '"><b>' + esc(o.op_code) + '</b> ' + esc(o.operation_name) + (dn ? ' <small>' + esc(dn) + '</small>' : '') + '</li>';
+        });
+        if (!shown.length) html = '<li class="none">ไม่พบ Code operation ที่ตรงกับ "' + esc(query) + '"</li>';
+        else if (oItems.length > shown.length) html += '<li class="none">แสดง ' + shown.length + ' จาก ' + oItems.length + ' รายการ พิมพ์เพิ่มเพื่อกรอง</li>';
+        oItems = shown; oList.innerHTML = html; oList.hidden = false; oIn.setAttribute('aria-expanded', 'true'); oActive = -1;
+      }
+      function opHighlight(i) {
+        var lis = oList.querySelectorAll('li[data-i]'); if (!lis.length) return;
+        oActive = (i + lis.length) % lis.length;
+        lis.forEach(function (li, k) { li.classList.toggle('on', k === oActive); });
+        lis[oActive].scrollIntoView({ block: 'nearest' });
+      }
+      function opPick(o) {
+        if (g('cf_dept').value !== o.department_id) {            // เลือกจากทุกแผนก: ตั้งแผนกให้อัตโนมัติ
+          g('cf_dept').value = o.department_id; fillDeptDependent(o.id, g('cf_surgeon').value || null);
+        }
+        oSel.value = o.id; oSel.dispatchEvent(new Event('change', { bubbles: true }));
+        syncOpText(); opClose();
+      }
+      oIn.addEventListener('focus', function () { oIn.select(); opRender(''); });
+      oIn.addEventListener('input', function () { oSel.value = ''; oClear.hidden = true; opRender(oIn.value); });
+      oIn.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowDown') { e.preventDefault(); if (oList.hidden) opRender(oIn.value); opHighlight(oActive + 1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); opHighlight(oActive - 1); }
+        else if (e.key === 'Enter') { if (!oList.hidden) { e.preventDefault(); var o = oItems[oActive >= 0 ? oActive : (oItems.length === 1 ? 0 : -1)]; if (o) opPick(o); } }
+        else if (e.key === 'Escape') { opClose(); syncOpText(); }
+      });
+      oList.addEventListener('mousedown', function (e) {           // mousedown กัน input เสีย focus ก่อนคลิก
+        var li = e.target.closest('li[data-i]'); if (!li) { e.preventDefault(); return; }
+        e.preventDefault(); opPick(oItems[+li.dataset.i]);
+      });
+      oIn.addEventListener('blur', function () { setTimeout(function () { opClose(); syncOpText(); }, 120); });
+      oClear.addEventListener('click', function () { oSel.value = ''; syncOpText(); oIn.focus(); });
+      g('cf_dept').addEventListener('change', syncOpText);
+      syncOpText();
 
       /* ----- แสดง/ซ่อนตามเงื่อนไข ----- */
       function toggles() {
