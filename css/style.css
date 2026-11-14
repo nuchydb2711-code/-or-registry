@@ -195,3 +195,14 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:#68a9b4;box-shado
   .sect{font-size:.94rem;padding:10px 12px;margin-top:8px}
   .team-panel{padding:12px}
 }
+
+/* ช่องพิมพ์ค้นหา Code operation */
+.combo{position:relative}
+.combo input{padding-right:46px}
+.combo-x{position:absolute;right:6px;top:6px;width:38px;height:38px;border:0;background:transparent;font-size:1.5rem;line-height:1;color:var(--muted);cursor:pointer;border-radius:8px}
+.combo-x:hover{background:var(--blue-soft)}
+.combo-list{position:absolute;z-index:40;left:0;right:0;top:100%;margin:4px 0 0;padding:4px;list-style:none;max-height:320px;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.combo-list li{padding:11px 12px;border-radius:8px;cursor:pointer;line-height:1.4}
+.combo-list li:hover,.combo-list li.on{background:var(--blue-soft)}
+.combo-list li.none{color:var(--muted);cursor:default;font-size:.9rem}
+.combo-list li small{display:block;color:var(--muted)}
