@@ -130,7 +130,7 @@
         '<div><label for="cf_period">ในเวลา / นอกเวลา</label><select id="cf_period">' + OR.enumOptions(OR.L.period, '— ไม่ระบุ —', v.work_period) + '</select><div class="hint" id="cf_period_hint"></div></div>' +
         '<div><label for="cf_ward">Ward</label><input id="cf_ward" type="text" maxlength="60" value="' + esc(v.ward || '') + '"></div>' +
         '<div class="sect">08 · ทีมผ่าตัด (OR Team)</div>' +
-        '<div class="full team-panel"><div class="team-head"><div><label>ทีมผ่าตัด (OR Team)</label><div class="hint">คลิกช่องชื่อเพื่อเลือกจากรายชื่อ · ไม่มีชื่อให้พิมพ์ได้เลย เมื่อบันทึก Case ระบบจะจำชื่อใหม่ไว้ให้เลือกครั้งหน้า (หรือกด “＋ เพิ่ม” ในรายการเพื่อจำทันที)</div></div><div class="team-tools"><button class="btn sm" id="cf_team_copy" type="button" title="ใช้ทีมจาก Case ล่าสุดของวัน/ห้องเดียวกัน">⎘ ใช้ทีมเดิม</button><button class="btn sm" id="cf_team_add" type="button">＋ เพิ่มบุคลากร</button></div></div><div id="cf_team_rows"></div><input id="cf_team" type="hidden" value="' + esc(v.team || '') + '"></div>' +
+        '<div class="full team-panel"><div class="team-head"><div><label>ทีมผ่าตัด (OR Team)</label><div class="hint">คลิกช่องชื่อเพื่อเลือกจากรายชื่อ (คนเดียวเลือกได้หลายตำแหน่ง เช่น Assistant / Scrub / Circulate — เลือกตำแหน่งที่ช่องซ้าย แล้วเลือกชื่อเดิมซ้ำได้) · ไม่มีชื่อให้พิมพ์ได้เลย เมื่อบันทึก Case ระบบจะจำชื่อใหม่ไว้ให้เลือกครั้งหน้า (หรือกด “＋ เพิ่ม” ในรายการเพื่อจำทันที)</div></div><div class="team-tools"><button class="btn sm" id="cf_team_copy" type="button" title="ใช้ทีมจาก Case ล่าสุดของวัน/ห้องเดียวกัน">⎘ ใช้ทีมเดิม</button><button class="btn sm" id="cf_team_add" type="button">＋ เพิ่มบุคลากร</button></div></div><div id="cf_team_rows"></div><input id="cf_team" type="hidden" value="' + esc(v.team || '') + '"></div>' +
         '<div class="sect">09 · ความปลอดภัย ความเสี่ยง และข้อมูลเพิ่มเติม</div>' +
         '<div><label class="chk"><input id="cf_ods" type="checkbox"' + (v.ods_mis ? ' checked' : '') + '> โครงการ ODS / MIS</label></div>' +
         '<div><label for="cf_supplies">ตรวจเวชภัณฑ์ในระบบ</label><select id="cf_supplies"><option value="">— ไม่ระบุ —</option><option value="1"' + (v.supplies_checked === true ? ' selected' : '') + '>ครบ</option><option value="0"' + (v.supplies_checked === false ? ' selected' : '') + '>ไม่ครบ</option></select></div>' +
@@ -161,6 +161,7 @@
         row.innerHTML = '<select aria-label="ตำแหน่งในทีม" class="team-role">' + teamRoles.map(function (r) { return '<option value="' + r[0] + '"' + (r[0] === (role || 'SCRUB_NURSE') ? ' selected' : '') + '>' + esc(r[1]) + '</option>'; }).join('') + '</select>' +
           '<div class="team-namebox"></div><button class="team-remove" type="button" aria-label="ลบบุคลากร" title="ลบ">×</button>';
         var roleSel = row.querySelector('.team-role');
+        var roleTouched = !!name;   // แถวที่มีชื่ออยู่แล้ว หรือที่ผู้ใช้เลือกตำแหน่งเอง → ไม่เปลี่ยนตำแหน่งตามตำแหน่งหลักของชื่อที่เลือก
         var cb = OR.combobox(row.querySelector('.team-namebox'), {
           placeholder: 'คลิกเลือก หรือพิมพ์ชื่อ...', free: true,
           items: function () {   // ชื่อที่ตำแหน่งตรงกับแถวนี้ขึ้นก่อน
@@ -168,7 +169,7 @@
             st.sort(function (a, b) { return (b.staff_role === r) - (a.staff_role === r) || a.staff_name.localeCompare(b.staff_name, 'th'); });
             return st.map(function (x) { return { id: x.id, label: x.staff_name, sub: roleLabel(x.staff_role), role: x.staff_role }; });
           },
-          onPick: function (it) { if (it.role && it.role !== 'OTHER') roleSel.value = it.role; syncTeam(); },
+          onPick: function (it) { if (!roleTouched && it.role && it.role !== 'OTHER') roleSel.value = it.role; roleTouched = true; syncTeam(); },
           onClear: syncTeam,
           create: lookups.staffMissing ? null : async function (text) {
             var r = await OR.db.from('or_staff').insert({ staff_name: text, staff_role: roleSel.value }).select('*').single();
@@ -181,7 +182,7 @@
         });
         cb.input.setAttribute('aria-label', 'ชื่อบุคลากร'); cb.input.value = name || ''; if (name) cb.set({ id: null, label: name });
         cb.input.addEventListener('input', syncTeam); cb.input.addEventListener('blur', function () { setTimeout(syncTeam, 200); });
-        roleSel.addEventListener('change', syncTeam);
+        roleSel.addEventListener('change', function () { roleTouched = true; syncTeam(); });
         row.querySelector('.team-remove').addEventListener('click', function () { row.remove(); syncTeam(); });
         teamRows.appendChild(row); syncTeam(); return cb;
       }
